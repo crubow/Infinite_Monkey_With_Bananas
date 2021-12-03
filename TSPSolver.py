@@ -321,12 +321,14 @@ class TSPSolver:
 
 		# define the gains of heuristic equation
 		gain_cost = 1
-		gain_degree = num_cities * 25
+		gain_degree = 1
 
 		# get best solution so far if exists
 		greedy_result = self.greedy()
 		best_solution_length = greedy_result["cost"]
 		best_solution_path = []
+		# for testing the gains
+		best_solution_length = math.inf
 
 		# start the clock
 		start_time = time.time()
@@ -361,22 +363,7 @@ class TSPSolver:
 					current_path_length = math.inf
 					break
 				# if length_temp in P, then only one option is left
-				# TODO:: check for redundant redundancy
-				if len(accessible) == 1:
-					current_path_length += length_temp
-					i = accessible[0]
-					# update current degree array
-					current_degree_array[current_city] = math.inf
-					for i in accessible:
-						current_degree_array[i] -= 1
-					# if a degree is zero we've lost
-					if 0 in current_degree_array:
-						current_path_length = math.inf
-						break
-					# move to next city
-					current_path.append(i)
-					current_city = i
-					continue
+
 				# weight the options
 				for i in accessible:
 					P[i] = length_temp - P[i]
@@ -404,17 +391,17 @@ class TSPSolver:
 					D[i] = length_temp - D[i]
 
 				# create probabalistic model
-				model = [gain_cost * P[i] + gain_degree * D[i] for i in accessible]
+				model = [gain_cost * P[i] + gain_degree * D[i] for i in range(len(D))]
 
-				length_temp = sum(model)
+				length_temp = sum(p for p in model if p != math.inf)
 				# generate random number
 				ran_num = length_temp * rand.random()
 				accumulation = 0
 				# find next path to take
 				for i in range(len(model)):
-					accumulation += model[i]
+					if model[i] != math.inf:
+						accumulation += model[i]
 					if accumulation >= ran_num:
-						i = accessible[i]
 						current_path_length += start_array[current_city][i]
 						# update current degree array
 						current_degree_array[current_city] = math.inf
