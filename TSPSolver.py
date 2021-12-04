@@ -328,7 +328,7 @@ class TSPSolver:
 		best_solution_length = greedy_result["cost"]
 		best_solution_path = []
 		# for testing the gains
-		best_solution_length = math.inf
+		# best_solution_length = math.inf
 
 		# start the clock
 		start_time = time.time()
@@ -392,31 +392,11 @@ class TSPSolver:
 					break
 				if continue_flag:
 					continue
-				# create probabalistic model
-				model = [gain_cost * C[i] + gain_degree * D[i] for i in accessible]
-
-				length_temp = sum(p for p in model if p != math.inf)
-				# generate random number
-				ran_num = length_temp * rand.random()
-				accumulation = 0
-				# find next path to take
-				for i in range(len(model)):
-					accumulation += model[i]
-					if accumulation >= ran_num:
-						next_city = accessible[i]
-						current_path_length += start_array[current_city][next_city]
-						# update current degree array
-						current_degree_array[current_city] = math.inf
-						for j in accessible:
-							current_degree_array[j] -= 1
-						# if a degree is zero we've lost
-						if 0 in current_degree_array and len(current_path) != num_cities - 1:
-							current_path_length = math.inf
-							break
-						# move to next city
-						current_path.append(next_city)
-						current_city = next_city
-						break
+				# find next city
+				current_city, current_path_length = self.find_next_city(C, D, accessible, current_city,
+																		current_degree_array, current_path,
+																		current_path_length, gain_cost, gain_degree,
+																		num_cities, start_array)
 			# if better solution is found
 			if current_path_length < best_solution_length:
 				best_solution_length = current_path_length
@@ -455,6 +435,33 @@ class TSPSolver:
 		results["total"] = None
 		results["pruned"] = None
 		return results
+
+	def find_next_city(self, C, D, accessible, current_city, current_degree_array, current_path, current_path_length,
+					   gain_cost, gain_degree, num_cities, start_array):
+		model = [gain_cost * C[i] + gain_degree * D[i] for i in accessible]
+		length_temp = sum(p for p in model if p != math.inf)
+		# generate random number
+		ran_num = length_temp * rand.random()
+		accumulation = 0
+		# find next path to take
+		for i in range(len(model)):
+			accumulation += model[i]
+			if accumulation >= ran_num:
+				next_city = accessible[i]
+				current_path_length += start_array[current_city][next_city]
+				# update current degree array
+				current_degree_array[current_city] = math.inf
+				for j in accessible:
+					current_degree_array[j] -= 1
+				# if a degree is zero we've lost
+				if 0 in current_degree_array and len(current_path) != num_cities - 1:
+					current_path_length = math.inf
+					break
+				# move to next city
+				current_path.append(next_city)
+				current_city = next_city
+				break
+		return current_city, current_path_length
 
 	def get_costs(self, intersection, accessible):
 		# set up cost weights
