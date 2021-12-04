@@ -308,7 +308,7 @@ class TSPSolver:
 		algorithm</returns> 
 	'''
 
-	def fancy( self, time_allowance=60.0 ):
+	def fancy(self, time_allowance=60.0):
 		# get set up
 		cities = self._scenario.getCities()
 		num_cities = len(cities)
@@ -321,7 +321,7 @@ class TSPSolver:
 
 		# define the gains of heuristic equation
 		gain_cost = 1
-		gain_degree = 1
+		gain_degree = num_cities
 
 		# get best solution so far if exists
 		greedy_result = self.greedy()
@@ -343,7 +343,7 @@ class TSPSolver:
 			current_city = start_city
 			# until we have a circuit
 			while len(current_path) < num_cities + 1:
-				# if we have a less good path so far
+				# if we have a not less worse path so far
 				if current_path_length >= best_solution_length:
 					break
 				# if we return to start city
@@ -352,27 +352,24 @@ class TSPSolver:
 					current_path_length += start_array[current_city][start_city]
 					break
 
-				# set up cost weights
-				P = start_array[current_city].copy()
 				# determine accessability array
-				accessible = [i for i in range(len(P)) if P[i] != math.inf and i not in current_path]
-				# add up the costs
-				length_temp = sum((P[i] for i in accessible), -1)
-				# if length_temp == 0, no solution
-				if length_temp == -1:
+				accessible = [i for i in range(len(start_array[current_city])) if start_array[current_city][i] != math.inf and i not in current_path]
+
+				# if accessible is empty there is no solution
+				if not accessible:
 					current_path_length = math.inf
 					break
-				# if length_temp in P, then only one option is left
 
-				# weight the options
-				for i in accessible:
-					P[i] = length_temp - P[i]
+				# get weighted costs
+				C = self.get_costs(start_array[current_city], accessible)
 
 				# weight the degrees
-				length_temp = sum(current_degree_array[i] for i in accessible)
 				D = current_degree_array.copy()
+				length_temp = sum(current_degree_array[i] for i in accessible)
 
 				# if 1 in D then must take it
+				break_flag = False
+				continue_flag = False
 				for i in accessible:
 					if D[i] == 1:
 						current_path_length += start_array[current_city][i]
@@ -381,17 +378,22 @@ class TSPSolver:
 						for j in accessible:
 							current_degree_array[j] -= 1
 						# if a degree is zero we've lost
-						if 0 in current_degree_array:
+						if 0 in current_degree_array and len(current_path) != num_cities - 1:
 							current_path_length = math.inf
+							break_flag = True
 							break
 						# move to next city
 						current_path.append(i)
 						current_city = i
+						continue_flag = True
 						break
 					D[i] = length_temp - D[i]
-
+				if break_flag:
+					break
+				if continue_flag:
+					continue
 				# create probabalistic model
-				model = [gain_cost * P[i] + gain_degree * D[i] for i in range(len(D))]
+				model = [gain_cost * C[i] + gain_degree * D[i] for i in accessible]
 
 				length_temp = sum(p for p in model if p != math.inf)
 				# generate random number
@@ -399,21 +401,21 @@ class TSPSolver:
 				accumulation = 0
 				# find next path to take
 				for i in range(len(model)):
-					if model[i] != math.inf:
-						accumulation += model[i]
+					accumulation += model[i]
 					if accumulation >= ran_num:
-						current_path_length += start_array[current_city][i]
+						next_city = accessible[i]
+						current_path_length += start_array[current_city][next_city]
 						# update current degree array
 						current_degree_array[current_city] = math.inf
 						for j in accessible:
 							current_degree_array[j] -= 1
 						# if a degree is zero we've lost
-						if 0 in current_degree_array:
+						if 0 in current_degree_array and len(current_path) != num_cities - 1:
 							current_path_length = math.inf
 							break
 						# move to next city
-						current_path.append(i)
-						current_city = i
+						current_path.append(next_city)
+						current_city = next_city
 						break
 			# if better solution is found
 			if current_path_length < best_solution_length:
@@ -429,7 +431,15 @@ class TSPSolver:
 
 		# if greedy is better
 		if not best_solution_path:
-			return greedy_result
+			results = {}
+			results["cost"] = 0
+			results["time"] = time.time() - start_time
+			results["count"] = 0
+			results["soln"] = None
+			results["max"] = None
+			results["total"] = None
+			results["pruned"] = None
+			return results
 		# return the results
 		return_route = []
 		for i in best_solution_path:
@@ -445,6 +455,19 @@ class TSPSolver:
 		results["total"] = None
 		results["pruned"] = None
 		return results
+
+	def get_costs(self, intersection, accessible):
+		# set up cost weights
+		P = intersection.copy()
+
+		# add up the costs
+		length_temp = sum(P[i] for i in accessible)
+
+		# weight the options
+		for i in accessible:
+			P[i] = length_temp - P[i]
+
+		return P
 
 	if __name__ == "__main__":
 		a = [[1, 2, math.inf], [7, 2, 1], [math.inf, 9, 8]]
